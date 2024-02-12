@@ -1,70 +1,75 @@
+# import libraries
+import csv
 import cv2
-import numpy as np
+import pytesseract
+pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
-img = cv2.imread('GP00111811.JPG')
+def pre_processing(image):
+    """
+    This function take one argument as
+    input. this function will convert
+    input image to binary image
+    :param image: image
+    :return: thresholded image
+    """
+    gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    # converting it to binary image
+    threshold_img = cv2.threshold(gray_image, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
+    # saving image to view threshold image
+    cv2.imwrite('thresholded.png', threshold_img)
 
+    cv2.imshow('threshold image', threshold_img)
+    # Maintain output window until
+    # user presses a key
+    cv2.waitKey(0)
+    # Destroying present windows on screen
+    cv2.destroyAllWindows()
 
-# get grayscale image
-def get_grayscale(image):
-    return cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    return threshold_img
 
+def parse_text(pro_image):
+    img = cv2.imread(pro_image)
+    d = pytesseract.image_to_data(pro_image, output_type=pytesseract.Output.DICT)
+    print(d.keys())
+    return d
+    # text = str(pytesseract.image_to_string(img))
+    # print(text)
 
-# noise removal
-def remove_noise(image):
-    return cv2.medianBlur(image, 5)
+def format_text(details):
+    """
+    This function take one argument as
+    input.This function will arrange
+    resulted text into proper format.
+    :param details: dictionary
+    :return: list
+    """
+    parse_text = []
+    word_list = []
+    last_word = ''
+    for word in details['text']:
+        if word != '':
+            word_list.append(word)
+            last_word = word
+        if (last_word != '' and word == '') or (word == details['text'][-1]):
+            parse_text.append(word_list)
+            word_list = []
 
+    return parse_text
 
-# thresholding
-def thresholding(image):
-    return cv2.threshold(image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
+def findsku(formatted):
+    search_key = 'GP'
+    res = [val for key, val in formatted.items() if search_key in key]
+    return (str(res))
 
-
-# dilation
-def dilate(image):
-    kernel = np.ones((5, 5), np.uint8)
-    return cv2.dilate(image, kernel, iterations=1)
-
-
-# erosion
-def erode(image):
-    kernel = np.ones((5, 5), np.uint8)
-    return cv2.erode(image, kernel, iterations=1)
-
-
-# opening - erosion followed by dilation
-def opening(image):
-    kernel = np.ones((5, 5), np.uint8)
-    return cv2.morphologyEx(image, cv2.MORPH_OPEN, kernel)
-
-
-# canny edge detection
-def canny(image):
-    return cv2.Canny(image, 100, 200)
-
-
-# skew correction
-def deskew(image):
-    coords = np.column_stack(np.where(image > 0))
-    angle = cv2.minAreaRect(coords)[-1]
-    if angle < -45:
-        angle = -(90 + angle)
-    else:
-        angle = -angle
-    (h, w) = image.shape[:2]
-    center = (w // 2, h // 2)
-    M = cv2.getRotationMatrix2D(center, angle, 1.0)
-    rotated = cv2.warpAffine(image, M, (w, h), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
-    return rotated
-
-
-# template matching
-def match_template(image, template):
-    return cv2.matchTemplate(image, template, cv2.TM_CCOEFF_NORMED)
-
-image = cv2.imread('GP00111811.JPG')
-
-gray = get_grayscale(image)
-# thresh = thresholding(gray)
-cv2.imshow('test',gray)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+if __name__ == "__main__":
+    # reading image from local
+    image = cv2.imread('GP00111811.JPG')
+    # calling pre_processing function to perform pre-processing on input image.
+    thresholds_image = pre_processing(image)
+    parsed = parse_text("thresholded.png")
+    print("\n\n")
+    formatted = format_text(parsed)
+    print(formatted)
+    print("\n\n")
+    choices = findsku(formatted)
+    print(choices)
