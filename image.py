@@ -1,9 +1,7 @@
 import cv2
 import numpy as np
-import pytesseract
-from pytesseract import Output
 
-img = cv2.imread('image.jpg')
+img = cv2.imread('GP00111811.JPG')
 
 
 # get grayscale image
@@ -66,5 +64,7 @@ def match_template(image, template):
 image = cv2.imread('GP00111811.JPG')
 
 gray = get_grayscale(image)
-thresh = thresholding(gray)
-thresh.imshow()
+# thresh = thresholding(gray)
+cv2.imshow('test',gray)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
