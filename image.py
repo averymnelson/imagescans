@@ -1,17 +1,12 @@
-# import libraries
-import csv
+import os
+import re
+import shutil
+import time
 import cv2
 import pytesseract
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
 def pre_processing(image):
-    """
-    This function take one argument as
-    input. this function will convert
-    input image to binary image
-    :param image: image
-    :return: thresholded image
-    """
     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     # converting it to binary image
     threshold_img = cv2.threshold(gray_image, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
@@ -28,7 +23,7 @@ def pre_processing(image):
     return threshold_img
 
 def parse_text(pro_image):
-    img = cv2.imread(pro_image)
+    # img = cv2.imread(pro_image)
     d = pytesseract.image_to_data(pro_image, output_type=pytesseract.Output.DICT)
     print(d.keys())
     return d
@@ -36,13 +31,6 @@ def parse_text(pro_image):
     # print(text)
 
 def format_text(details):
-    """
-    This function take one argument as
-    input.This function will arrange
-    resulted text into proper format.
-    :param details: dictionary
-    :return: list
-    """
     parse_text = []
     word_list = []
     last_word = ''
@@ -56,20 +44,86 @@ def format_text(details):
 
     return parse_text
 
-def findsku(formatted):
-    search_key = 'GP'
-    res = [val for key, val in formatted.items() if search_key in key]
-    return (str(res))
+def findsku(formatted, errors, title):
+    res = []
+    for s in formatted:
+        for t in s:
+            if re.search('GP', t):
+                res.append(t)
+    if not res or len(res)>1:            
+        errors.append(title)
+    sku = res[0]
+    return sku
+
+def cleanup(test_str):
+    bad_char = [';', ':', '!', "*", " "]
+    temp = ''
+    for i in bad_char:
+        temp += i
+    res = re.sub(rf'[{temp}]', '', test_str)
+    return res
+
+def renaming(sku, img, dest):
+    # split_tup = os.path.splitext(img)
+    # print(split_tup)
+    # file_name = split_tup[0]
+    file_extension = '.jpg'
+    # file_extension = split_tup[1]
+    new_sku = sku + file_extension
+    source_path = os.path.join(os.getcwd(), img)
+    destination_path = os.path.join(dest, new_sku)
+    
+    # Move the file to the destination directory and rename it
+    shutil.move(source_path, destination_path)
+
+def createdirectories():
+    timestr = time.strftime("%Y%m%d")
+    path = './renamed_'
+    path1 = path+timestr
+    if not os.path.exists(path1):
+        os.mkdir(path1)
+    path = './errors_'
+    path2=path+timestr
+    if not os.path.exists(path2):
+        os.mkdir(path2)
+    paths = []
+    paths.append(path1)
+    paths.append(path2)
+    return paths
+
+def mverrors(errors, paths):
+    for img in errors:
+        source_path = os.path.join(os.getcwd(), img)
+        destination_path = os.path.join(paths[1], img)
+        shutil.move(source_path, destination_path)
+
+def runimg(curr, paths, errors):
+    image = cv2.imread(curr)
+    # calling pre_processing function to perform pre-processing on input image.
+    thresholds_image = pre_processing(image)
+    parsed = parse_text(thresholds_image)
+    print("\n\n")
+    formats = format_text(parsed)
+    formatted = [ele for ele in formats if ele != []]
+    print(formatted)
+    if formatted:
+        print("\n\n")
+        choices = findsku(formatted, errors, curr)
+        print(choices)
+        attempt = cleanup(choices)
+        print("\n\n")
+        print(attempt)
+        renaming(attempt, curr, paths[0])
+    else: 
+        errors.append(curr) 
 
 if __name__ == "__main__":
     # reading image from local
-    image = cv2.imread('GP00111811.JPG')
-    # calling pre_processing function to perform pre-processing on input image.
-    thresholds_image = pre_processing(image)
-    parsed = parse_text("thresholded.png")
-    print("\n\n")
-    formatted = format_text(parsed)
-    print(formatted)
-    print("\n\n")
-    choices = findsku(formatted)
-    print(choices)
+    errors = []
+    paths = []
+    paths = createdirectories()
+    for images in os.listdir(os.getcwd()):
+        if (images.endswith(".jpg") or images.endswith(".JPG") or images.endswith(".heic") or images.endswith(".HEIC")):
+            curr = images
+            runimg(curr, paths, errors)
+    mverrors(errors, paths)
