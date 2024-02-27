@@ -9,30 +9,48 @@ import pillow_heif
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
 def pre_processing(image):
+    """convert image to greyscale and threshold it so tesseract can detect strings better
+
+    Parameters:
+    image (jpg): regular color image
+
+    Returns:
+    png: image converted to greyscale and thresholded
+
+   """
+
     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    # converting it to binary image
     threshold_img = cv2.threshold(gray_image, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
-    # saving image to view threshold image
     cv2.imwrite('thresholded.png', threshold_img)
-
     cv2.imshow('threshold image', threshold_img)
-    # Maintain output window until
-    # user presses a key
-    # cv2.waitKey(0)
-    # Destroying present windows on screen
     cv2.destroyAllWindows()
-
     return threshold_img
 
 def parse_text(pro_image):
-    # img = cv2.imread(pro_image)
+    """parse image created by pre_processing function to return strings detected in a list
+
+    Parameters:
+    pro_img (png): greyscaled and thresholded png image
+
+    Returns:
+    list: data detected in image
+
+   """
+
     d = pytesseract.image_to_data(pro_image, output_type=pytesseract.Output.DICT)
-    # print(d.keys())
     return d
-    # text = str(pytesseract.image_to_string(img))
-    # print(text)
 
 def format_text(details):
+    """format and clean text found in parse_text
+
+    Parameters:
+    details (list): text located in thresholded image
+
+    Returns:
+    list: cleaned data detected in image
+
+   """
+
     parse_text = []
     word_list = []
     last_word = ''
@@ -46,6 +64,19 @@ def format_text(details):
     return parse_text
 
 def findsku(formatted, errors, title, form):
+    """parse formatted text to find anything containing particular sku characters
+
+    Parameters:
+    formatted (list): data returned by format_text that contains data found in image
+    errors (list): list for failures
+    title (jpg): current image
+    form (string): characters the sku should contain
+
+    Returns:
+    string: string found in label that is estimated to be the sku
+
+   """
+
     res = []
     sku = None
     for s in formatted:
@@ -60,6 +91,16 @@ def findsku(formatted, errors, title, form):
     return sku
 
 def cleanup(test_str):
+    """remove special characters from text found in findsku function
+
+    Parameters:
+    test_str (string): estimated sku returned by findsku
+
+    Returns:
+    string: estimated sku without particular special characters
+
+   """
+
     res = None
     bad_char = [';', ':', '!', "*", " "]
     temp = ''
@@ -70,6 +111,18 @@ def cleanup(test_str):
     return res
 
 def renaming(sku, img, dest):
+    """rename jpg and move to folder
+
+    Parameters:
+    sku (string): cleaned sku to be the new name of the jpg file
+    img (jpg): original image
+    dest (string): destination path
+
+    Returns:
+    None
+
+   """
+
     file_extension = '.jpg'
     new_sku = sku + file_extension
     source_path = os.path.join(os.getcwd(), img)
@@ -77,6 +130,16 @@ def renaming(sku, img, dest):
     shutil.move(source_path, destination_path)
 
 def createdirectories():
+    """create folders for errors and renamed to be moved to
+
+    Parameters:
+    None
+
+    Returns:
+    list: paths to errors folder and renamed folder
+
+   """
+
     timestr = time.strftime("%Y%m%d")
     path = './renamed_'
     path1 = path+timestr
@@ -92,17 +155,39 @@ def createdirectories():
     return paths
 
 def mverrors(errors, paths):
+    """move all items in errors list to errors directory
+
+    Parameters:
+    errors (list): list of errors added to by other functions
+    paths (list): error and renamed folder paths
+
+    Returns:
+    None
+
+   """
+
     for img in errors:
         source_path = os.path.join(os.getcwd(), img)
         destination_path = os.path.join(paths[1], img)
         shutil.move(source_path, destination_path)
 
 def runimg(curr, paths, errors, form):
+    """full function for parsing one image
+
+    Parameters:
+    curr (jpg): image being processed
+    paths (list): paths for error and renamed folders
+    errors (list): list containing detected failures
+    form (string): starting letters for sku
+
+    Returns:
+    None
+
+   """
+
     image = cv2.imread(curr)
-    # calling pre_processing function to perform pre-processing on input image.
     thresholds_image = pre_processing(image)
     parsed = parse_text(thresholds_image)
-    # print("\n\n")
     if parsed:
         formats = format_text(parsed)
         formatted = [ele for ele in formats if ele != []]
@@ -119,9 +204,22 @@ def runimg(curr, paths, errors, form):
             errors.append(curr) 
     else: 
             errors.append(curr) 
-
+#create docstrings
+    def documentation(self):
+        f = open("docstrings.txt", "a")
+        f.write(time.strftime("%Y%m%d"))
+        f.write(pre_processing.__doc__)
+        f.write(parse_text.__doc__)
+        f.write(format_text.__doc__)
+        f.write(findsku.__doc__)
+        f.write(cleanup.__doc__)
+        f.write(renaming.__doc__)
+        f.write(createdirectories.__doc__)
+        f.write(mverrors.__doc__)
+        f.write(runimg.__doc__)
+        f.close()
+# change format for heic photos, then for all jpg in current directory, run parsing function
 if __name__ == "__main__":
-    # reading image from local
     errors = []
     paths = []
     paths = createdirectories()
