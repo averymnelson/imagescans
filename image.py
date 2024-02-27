@@ -204,20 +204,7 @@ def runimg(curr, paths, errors, form):
             errors.append(curr) 
     else: 
             errors.append(curr) 
-#create docstrings
-    def documentation(self):
-        f = open("docstrings.txt", "a")
-        f.write(time.strftime("%Y%m%d"))
-        f.write(pre_processing.__doc__)
-        f.write(parse_text.__doc__)
-        f.write(format_text.__doc__)
-        f.write(findsku.__doc__)
-        f.write(cleanup.__doc__)
-        f.write(renaming.__doc__)
-        f.write(createdirectories.__doc__)
-        f.write(mverrors.__doc__)
-        f.write(runimg.__doc__)
-        f.close()
+
 # change format for heic photos, then for all jpg in current directory, run parsing function
 if __name__ == "__main__":
     errors = []
