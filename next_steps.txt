@@ -1,0 +1,5 @@
+Steps for V2
+-After database is set up for price scraping run the collected part number from this project through it to ensure it is a valid file name.
+ if not, move to errors instead of renaming. 
+-find a better method for taking pictures of barcodes such that less photos fail. might look into a scanning app like camscanner
+ or see if another image processing method is more effective than thresholding. Possibly key up contrast after one of these steps? 
